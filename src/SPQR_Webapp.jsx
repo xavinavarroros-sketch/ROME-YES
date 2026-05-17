@@ -4,10 +4,13 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0A0804;color:#EEE0C0;font-family:'EB Garamond',serif}
-::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:#0A0804}::-webkit-scrollbar-thumb{background:#3A2810}
-input,select,textarea,button{outline:none}
+html{font-size:18px;-webkit-text-size-adjust:100%}
+body{background:#0A0804;color:#EEE0C0;font-family:'EB Garamond',serif;font-size:1rem;line-height:1.45}
+img{max-width:100%}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#0A0804}::-webkit-scrollbar-thumb{background:#3A2810}
+input,select,textarea,button{outline:none;font-size:1rem}
 button{cursor:pointer}
+@media(max-width:720px){html{font-size:17px}body{overflow-x:hidden}.spqr-shell{padding:0.65rem!important}.spqr-topbar{position:static!important}.spqr-tabs{position:static!important;top:auto!important}.spqr-senate-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:0.4rem}.spqr-modal{align-items:flex-start!important;padding:0.5rem!important}.spqr-modal-box{max-height:96vh!important;padding:1rem!important}.spqr-card-grid{grid-template-columns:1fr!important}.spqr-stat-grid{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))!important}.spqr-resource-grid{grid-template-columns:1fr!important}}
 `;
 const T={bg:"#0A0804",surf:"#141008",card:"#1C1510",border:"#3A2810",bhi:"#5A4020",
   gold:"#C8922A",ghi:"#F0C040",red:"#8B1515",rhi:"#CC3030",
@@ -71,8 +74,8 @@ const SEATS={consul_1:{c:4,r:0},consul_2:{c:4,r:1},praetor_1:{c:3,r:2},praetor_2
 const DEF_GAME={session:1,sessionInSeason:1,year:218,season:"Summer",
   gold:6000,food:5000,pop:175000,legionUpkeep:80,legionFood:60,lgold:400,lfood:200,lpop:5000,lturns:3};
 
-const DEF_LEGIONS=["I","II","III","IV","V","VI","VII","VIII","IX","X"].map((id,i)=>
-  ({id,str:4500-i*150,max:4500,status:"active",prog:0,location:"Roma"}));
+const DEF_LEGIONS=["I","II","III","IV","V","VI","VII","VIII","IX","X"].map((id)=>
+  ({id,name:`Legio ${id}`,str:5000,max:5000,status:"active",prog:0,location:"Roma"}));
 
 const DEF_REGIONS=[
   {id:"latium",   name:"Latium",        bG:200,bF:150,s:"roman"},
@@ -116,7 +119,7 @@ const db={
 const sLab=g=>`${g.year} BC ${g.season} S${g.sessionInSeason}`;
 const fmt=n=>Number(n||0).toLocaleString();
 const calcInc=regs=>{let g=0,f=0;regs.forEach(r=>{const m=RS[r.s]?.m||0;g+=r.bG*m;f+=r.bF*m;});return{gold:Math.floor(g),food:Math.floor(f)};};
-const compress=(file,mx=200)=>new Promise(res=>{const c=document.createElement('canvas'),img=new Image(),u=URL.createObjectURL(file);img.onload=()=>{const s=Math.min(mx/img.width,mx/img.height,1);c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',0.75));};img.src=u;});
+const compress=(file,mx=600)=>new Promise(res=>{const c=document.createElement('canvas'),img=new Image(),u=URL.createObjectURL(file);img.onload=()=>{const s=Math.min(mx/img.width,mx/img.height,1);c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',0.75));};img.src=u;});
 const pushN=async(title,body,forId="all")=>{const all=await db.get("spqr_n")||[];all.push({id:Date.now()+Math.random().toString(36).slice(2),title,body,for:forId,ts:Date.now()});await db.set("spqr_n",all.slice(-200));};
 
 /* ══ SHARED UI ════════════════════════════════════════════════════════════ */
@@ -135,7 +138,7 @@ const Badge=({c,color=T.gold,sm})=><span style={{display:"inline-block",backgrou
 const STit=({c,sub})=><div style={{marginBottom:"0.6rem"}}><div style={{fontFamily:"'Cinzel',serif",color:T.gold,fontSize:"0.72rem",letterSpacing:"0.22em",borderBottom:`1px solid ${T.border}`,paddingBottom:"0.3rem",textTransform:"uppercase"}}>{c}</div>{sub&&<div style={{color:T.mut,fontSize:"0.78rem",marginTop:"0.25rem",fontStyle:"italic"}}>{sub}</div>}</div>;
 const Row=({children,gap="0.4rem",wrap})=><div style={{display:"flex",gap,alignItems:"center",flexWrap:wrap?"wrap":"nowrap"}}>{children}</div>;
 const Stat=({label,value,color=T.ghi})=><div style={{textAlign:"center",padding:"0.45rem 0.6rem",background:T.card,border:`1px solid ${T.border}`}}><div style={{fontSize:"1.3rem",fontFamily:"'Cinzel',serif",fontWeight:700,color}}>{value}</div><div style={{fontSize:"0.6rem",color:T.mut,letterSpacing:"0.12em",textTransform:"uppercase",marginTop:"0.08rem"}}>{label}</div></div>;
-function Modal({title,children,onClose,wide}){return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}><div style={{background:T.surf,border:`1px solid ${T.bhi}`,padding:"1.5rem",width:"100%",maxWidth:wide?"700px":"460px",maxHeight:"90vh",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:"1rem",alignItems:"center"}}><div style={{fontFamily:"'Cinzel',serif",color:T.gold,fontSize:"0.85rem",letterSpacing:"0.18em"}}>{title}</div><button onClick={onClose} style={{background:"none",border:"none",color:T.mut,fontSize:"1.1rem"}}>✕</button></div>{children}</div></div>);}
+function Modal({title,children,onClose,wide}){return(<div className="spqr-modal" style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",padding:"1rem"}}><div className="spqr-modal-box" style={{background:T.surf,border:`1px solid ${T.bhi}`,padding:"1.5rem",width:"100%",maxWidth:wide?"760px":"520px",maxHeight:"90vh",overflowY:"auto"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:"1rem",alignItems:"center",gap:"1rem"}}><div style={{fontFamily:"'Cinzel',serif",color:T.gold,fontSize:"1rem",letterSpacing:"0.18em"}}>{title}</div><button onClick={onClose} style={{background:"none",border:"none",color:T.mut,fontSize:"1.3rem"}}>✕</button></div>{children}</div></div>);}
 
 /* ══ NOTIFICATION BELL ════════════════════════════════════════════════════ */
 function NotifBell({userId}){
@@ -181,11 +184,35 @@ function NotifBell({userId}){
   );
 }
 
+
+function SenatorProfileModal({player,onClose}){
+  if(!player)return null;
+  const pos=player.role?POS[player.role]:null;
+  return(
+    <Modal title="SENATOR PROFILE" onClose={onClose} wide>
+      <div style={{display:"flex",gap:"1rem",alignItems:"flex-start",flexWrap:"wrap"}}>
+        {player.avatar?
+          <img src={player.avatar} style={{width:160,height:160,objectFit:"cover",border:`3px solid ${pos?pos.color:T.bhi}`}} alt="Senator avatar"/>:
+          <div style={{width:160,height:160,background:T.fnt,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Cinzel',serif",fontSize:"2rem",color:T.mut,border:`3px solid ${T.border}`}}>{player.latinName?.[0]||"?"}</div>}
+        <div style={{flex:1,minWidth:220}}>
+          <div style={{fontFamily:"'Cinzel',serif",fontSize:"1.35rem",fontWeight:800,color:T.ghi,marginBottom:"0.35rem"}}>{player.latinName}</div>
+          <div style={{fontSize:"1rem",color:T.text,marginBottom:"0.35rem"}}>{player.charClass||"Senator"}</div>
+          {pos&&<div style={{marginBottom:"0.5rem"}}><Badge c={pos.title} color={pos.color}/></div>}
+          {player.username&&<div style={{color:T.mut,marginBottom:"0.2rem"}}>Username: {player.username}</div>}
+          {player.discord&&<div style={{color:"#7289DA",marginBottom:"0.2rem"}}>Discord: {player.discord}</div>}
+          {player.joined&&<div style={{color:T.fnt}}>Enrolled: {new Date(player.joined).toLocaleDateString()}</div>}
+          {pos&&<div style={{marginTop:"0.75rem",padding:"0.75rem",background:T.bg,border:`1px solid ${pos.color}55`,color:T.mut,lineHeight:1.55}}>{pos.desc}</div>}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 /* ══ SENATE SEATING MAP ═══════════════════════════════════════════════════ */
-function SenateMap({players}){
+function SenateMap({players,onSelectPlayer}){
   const [hov,setHov]=useState(null);
   const [hovPos,setHovPos]=useState({x:0,y:0});
-  const COLS=9,ROWS=7,SZ=58;
+  const COLS=9,ROWS=7,SZ=64;
   // Map role key to seat position
   const seatToRole={};
   Object.entries(SEATS).forEach(([role,{c,r}])=>{seatToRole[`${c}_${r}`]=role;});
@@ -205,8 +232,8 @@ function SenateMap({players}){
   const regulars=players.filter(p=>!p.role);
   const hovPlayer=hov&&(hov.player||null);
   return(
-    <div style={{position:"relative",userSelect:"none"}}>
-      <div style={{display:"grid",gridTemplateColumns:`repeat(${COLS},${SZ}px)`,gridTemplateRows:`repeat(${ROWS},${SZ}px)`,gap:2,background:T.border,border:`2px solid ${T.bhi}`,width:"fit-content",margin:"0 auto"}}>
+    <div className="spqr-senate-scroll" style={{position:"relative",userSelect:"none"}}>
+      <div style={{display:"grid",gridTemplateColumns:`repeat(${COLS},${SZ}px)`,gridTemplateRows:`repeat(${ROWS},${SZ}px)`,gap:2,background:T.border,border:`2px solid ${T.bhi}`,width:"fit-content",margin:"0 auto",minWidth:`${COLS*SZ+16}px`}}>
         {Array.from({length:ROWS},(_,r)=>Array.from({length:COLS},(_,c)=>{
           const key=`${c}_${r}`;
           const role=seatToRole[key];
@@ -230,19 +257,20 @@ function SenateMap({players}){
                 setHov({role,posInfo,player:holder||regPlayer,isRegular:!role});
               }}
               onMouseLeave={()=>setHov(null)}
-              style={{background:bg,border:`1px solid ${bc}`,position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"3px",overflow:"hidden"}}>
+              onClick={()=>{const pl=holder||regPlayer;if(pl&&onSelectPlayer)onSelectPlayer(pl);}}
+              style={{background:bg,border:`1px solid ${bc}`,position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"3px",overflow:"hidden",cursor:(holder||regPlayer)?"pointer":"default"}}>
               {posInfo&&(
                 <>
                   <div style={{fontFamily:"'Cinzel',serif",fontSize:"0.5rem",color:holder?posInfo.color:posInfo.color+"88",textAlign:"center",letterSpacing:"0.05em",lineHeight:1.2,marginBottom:2}}>{posInfo.abbr}</div>
-                  {holder?.avatar&&<img src={holder.avatar} style={{width:24,height:24,objectFit:"cover",borderRadius:"50%",border:`1px solid ${posInfo.color}`}} alt=""/>}
+                  {holder?.avatar&&<img src={holder.avatar} style={{width:30,height:30,objectFit:"cover",borderRadius:"50%",border:`1px solid ${posInfo.color}`}} alt=""/>}
                   {!holder&&<div style={{fontSize:"0.6rem",color:posInfo.color+"66",fontFamily:"'Cinzel',serif",textAlign:"center",lineHeight:1}}>vacant</div>}
-                  {holder&&!holder.avatar&&<div style={{width:24,height:24,background:`${posInfo.color}33`,border:`1px solid ${posInfo.color}`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.55rem",color:posInfo.color,fontFamily:"'Cinzel',serif"}}>{holder.latinName?.[0]||"?"}</div>}
+                  {holder&&!holder.avatar&&<div style={{width:30,height:30,background:`${posInfo.color}33`,border:`1px solid ${posInfo.color}`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.55rem",color:posInfo.color,fontFamily:"'Cinzel',serif"}}>{holder.latinName?.[0]||"?"}</div>}
                 </>
               )}
               {!posInfo&&regPlayer&&(
                 <>
-                  {regPlayer.avatar?<img src={regPlayer.avatar} style={{width:20,height:20,objectFit:"cover",borderRadius:"50%",border:`1px solid ${T.border}`}} alt=""/>:
-                  <div style={{width:20,height:20,background:T.fnt,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.5rem",color:T.mut,fontFamily:"'Cinzel',serif"}}>{regPlayer.latinName?.[0]||"?"}</div>}
+                  {regPlayer.avatar?<img src={regPlayer.avatar} style={{width:28,height:28,objectFit:"cover",borderRadius:"50%",border:`1px solid ${T.border}`}} alt=""/>:
+                  <div style={{width:28,height:28,background:T.fnt,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.5rem",color:T.mut,fontFamily:"'Cinzel',serif"}}>{regPlayer.latinName?.[0]||"?"}</div>}
                   <div style={{fontSize:"0.42rem",color:T.mut,textAlign:"center",marginTop:1,lineHeight:1,fontFamily:"'Cinzel',serif",overflow:"hidden",maxWidth:"100%"}}>{regPlayer.latinName?.split(" ").slice(-1)[0]}</div>
                 </>
               )}
@@ -308,33 +336,35 @@ function VotingGrid({motion,players}){
 
 function SenatePanel({players,D}){
   const cfg=D.cfg||{};
+  const [selected,setSelected]=useState(null);
   return(
     <div>
-      {cfg.senateImage&&<div style={{marginBottom:"1rem",border:`1px solid ${T.bhi}`,overflow:"hidden",maxHeight:300}}><img src={cfg.senateImage} style={{width:"100%",objectFit:"cover"}} alt="The Senate of Rome"/></div>}
-      {!cfg.senateImage&&<div style={{marginBottom:"1rem",padding:"1.5rem",background:T.surf,border:`1px solid ${T.border}`,textAlign:"center",color:T.mut,fontStyle:"italic",fontSize:"0.9rem"}}>The Game Master has not yet posted a senate image.</div>}
+      {cfg.senateImage&&<div style={{marginBottom:"1rem",border:`1px solid ${T.bhi}`,overflow:"hidden",maxHeight:340}}><img src={cfg.senateImage} style={{width:"100%",objectFit:"cover"}} alt="The Senate of Rome"/></div>}
+      {!cfg.senateImage&&<div style={{marginBottom:"1rem",padding:"1.5rem",background:T.surf,border:`1px solid ${T.border}`,textAlign:"center",color:T.mut,fontStyle:"italic",fontSize:"1rem"}}>The Game Master has not yet posted a senate image.</div>}
       <Card>
-        <STit c="Curia Julia — Senate Seating" sub="Hover over a seat to see who occupies it"/>
-        <SenateMap players={players}/>
+        <STit c="Curia Julia — Senate Seating" sub="Click a senator to open his profile. On mobile, scroll the seating map sideways."/>
+        <SenateMap players={players} onSelectPlayer={setSelected}/>
       </Card>
       <Card>
         <STit c={`Enrolled Senators (${players.length})`}/>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:"0.5rem"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:"0.6rem"}}>
           {players.map(p=>{
             const pos=p.role?POS[p.role]:null;
             return(
-              <div key={p.id} style={{display:"flex",gap:"0.6rem",alignItems:"center",padding:"0.5rem",background:T.bg,border:`1px solid ${pos?pos.color+"44":T.fnt}`}}>
-                {p.avatar?<img src={p.avatar} style={{width:36,height:36,objectFit:"cover",borderRadius:"50%",border:`1px solid ${pos?pos.color:T.border}`,flexShrink:0}} alt=""/>:<div style={{width:36,height:36,background:`${pos?pos.color:T.fnt}33`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"0.8rem",color:pos?pos.color:T.mut,fontFamily:"'Cinzel',serif",flexShrink:0}}>{p.latinName?.[0]||"?"}</div>}
+              <div key={p.id} onClick={()=>setSelected(p)} style={{display:"flex",gap:"0.75rem",alignItems:"center",padding:"0.65rem",background:T.bg,border:`1px solid ${pos?pos.color+"66":T.fnt}`,cursor:"pointer"}}>
+                {p.avatar?<img src={p.avatar} style={{width:54,height:54,objectFit:"cover",borderRadius:"50%",border:`2px solid ${pos?pos.color:T.border}`,flexShrink:0}} alt=""/>:<div style={{width:54,height:54,background:`${pos?pos.color:T.fnt}33`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"1.1rem",color:pos?pos.color:T.mut,fontFamily:"'Cinzel',serif",flexShrink:0}}>{p.latinName?.[0]||"?"}</div>}
                 <div style={{minWidth:0}}>
-                  <div style={{fontFamily:"'Cinzel',serif",color:T.text,fontSize:"0.82rem",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.latinName}</div>
-                  <div style={{color:T.mut,fontSize:"0.72rem"}}>{p.charClass}{p.discord&&<span style={{color:"#7289DA",marginLeft:"0.4rem"}}>{p.discord}</span>}</div>
+                  <div style={{fontFamily:"'Cinzel',serif",color:T.text,fontSize:"0.95rem",fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.latinName}</div>
+                  <div style={{color:T.mut,fontSize:"0.85rem"}}>{p.charClass}{p.discord&&<span style={{color:"#7289DA",marginLeft:"0.4rem"}}>{p.discord}</span>}</div>
                   {pos&&<Badge c={pos.title} color={pos.color} sm/>}
                 </div>
               </div>
             );
           })}
-          {players.length===0&&<div style={{color:T.mut,fontStyle:"italic",fontSize:"0.88rem"}}>No senators have enrolled yet.</div>}
+          {players.length===0&&<div style={{color:T.mut,fontStyle:"italic",fontSize:"1rem"}}>No senators have enrolled yet.</div>}
         </div>
       </Card>
+      {selected&&<SenatorProfileModal player={selected} onClose={()=>setSelected(null)}/>} 
     </div>
   );
 }
@@ -532,7 +562,7 @@ function MyOfficePanel({user,game,legions,players,orders,deadline,onRefresh}){
             {legions.map(l=>{
               const sc={active:T.blue,raising:T.gold,destroyed:T.rhi,unraised:T.fnt};
               return<div key={l.id} style={{display:"flex",justifyContent:"space-between",padding:"0.3rem 0.5rem",background:T.bg,border:`1px solid ${T.border}`,fontSize:"0.82rem"}}>
-                <span>Legio {l.id}</span><span style={{color:sc[l.status]||T.mut}}>{l.status==="active"?`${fmt(l.str)} men`:l.status==="raising"?`Raising ${l.prog}/${game.lturns}t`:l.status.toUpperCase()}</span>
+                <span>{l.name||`Legio ${l.id}`}</span><span style={{color:sc[l.status]||T.mut}}>{l.status==="active"?`${fmt(l.str)} men`:l.status==="raising"?`Raising ${l.prog}/${game.lturns}t`:l.status.toUpperCase()}</span>
               </div>;
             })}
           </div>
@@ -541,7 +571,7 @@ function MyOfficePanel({user,game,legions,players,orders,deadline,onRefresh}){
       {(isQuaestor)&&(
         <Card>
           <STit c="Treasury"/>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"0.4rem"}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:"0.4rem"}}>
             <Stat label="Gold" value={`${fmt(game.gold)}T`}/>
             <Stat label="Legion Upkeep" value={`-${fmt(legions.filter(l=>l.status==="active").length*game.legionUpkeep)}T`} color={T.rhi}/>
             <Stat label="Net / Session" value={`${legions.filter(l=>l.status==="active").length*game.legionUpkeep>0?"—":"+"}${fmt(Math.abs(0))}`} color={T.mut}/>
@@ -551,7 +581,7 @@ function MyOfficePanel({user,game,legions,players,orders,deadline,onRefresh}){
       {(isAedile||(role==="quaestor_2"))&&(
         <Card>
           <STit c="Food Supply"/>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"0.4rem"}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:"0.4rem"}}>
             <Stat label="Food" value={`${fmt(game.food)}M`} color="#A0D060"/>
             <Stat label="Legion Consumption" value={`-${fmt(legions.filter(l=>l.status==="active").length*game.legionFood)}M`} color={T.rhi}/>
             <Stat label="Population" value={fmt(game.pop)} color={T.mut}/>
@@ -645,8 +675,8 @@ function CharacterPanel({user,onUpdate}){
         <STit c="My Character"/>
         <div style={{display:"flex",gap:"1rem",alignItems:"flex-start",flexWrap:"wrap",marginBottom:"0.75rem"}}>
           <div style={{flexShrink:0}}>
-            {av?<img src={av} style={{width:80,height:80,objectFit:"cover",border:`2px solid ${pos?pos.color:T.bhi}`}} alt="Avatar"/>:
-            <div style={{width:80,height:80,background:T.fnt,display:"flex",alignItems:"center",justifyContent:"center",border:`2px solid ${T.border}`,fontFamily:"'Cinzel',serif",color:T.mut,fontSize:"1.2rem"}}>{user.latinName?.[0]||"?"}</div>}
+            {av?<img src={av} style={{width:140,height:140,objectFit:"cover",border:`2px solid ${pos?pos.color:T.bhi}`}} alt="Avatar"/>:
+            <div style={{width:140,height:140,background:T.fnt,display:"flex",alignItems:"center",justifyContent:"center",border:`2px solid ${T.border}`,fontFamily:"'Cinzel',serif",color:T.mut,fontSize:"2rem"}}>{user.latinName?.[0]||"?"}</div>}
             <input type="file" ref={fileRef} onChange={handleFile} accept="image/*" style={{display:"none"}}/>
             <button onClick={()=>fileRef.current.click()} style={{display:"block",marginTop:"0.4rem",background:"none",border:`1px solid ${T.border}`,color:T.mut,fontFamily:"'Cinzel',serif",fontSize:"0.62rem",padding:"0.2rem 0.4rem",cursor:"pointer",width:"100%",letterSpacing:"0.06em"}}>UPLOAD AVATAR</button>
             {msg&&<div style={{color:T.gre,fontSize:"0.72rem",marginTop:"0.2rem"}}>{msg}</div>}
@@ -676,17 +706,18 @@ function CharacterPanel({user,onUpdate}){
   );
 }
 
-function LawsPanel(){
+function LawsPanel({laws}){
+  const list=(laws&&laws.length?laws:LAWS);
   return(
     <div>
       <Card style={{borderLeft:`3px solid ${T.gold}`}}>
         <STit c="Leges Romanae — Laws of the Roman Republic"/>
-        <div style={{fontSize:"0.88rem",color:T.mut,marginBottom:"0.75rem",lineHeight:1.5}}>These laws govern the Republic and all who hold office within it. Ignorance is no defence before the law.</div>
+        <div style={{fontSize:"1rem",color:T.mut,marginBottom:"0.75rem",lineHeight:1.6}}>These laws govern the Republic and all who hold office within it. Ignorance is no defence before the law.</div>
       </Card>
-      {LAWS.map((l,i)=>(
+      {list.map((l,i)=>(
         <Card key={i}>
-          <div style={{fontFamily:"'Cinzel',serif",color:T.gold,fontSize:"0.82rem",fontWeight:700,marginBottom:"0.45rem"}}>{l.t}</div>
-          <div style={{fontSize:"0.9rem",lineHeight:1.65,color:T.text}}>{l.b}</div>
+          <div style={{fontFamily:"'Cinzel',serif",color:T.gold,fontSize:"1rem",fontWeight:800,marginBottom:"0.45rem"}}>{l.t}</div>
+          <div style={{fontSize:"1.05rem",lineHeight:1.7,color:T.text,whiteSpace:"pre-wrap"}}>{l.b}</div>
         </Card>
       ))}
     </div>
@@ -697,17 +728,20 @@ function MapPanel({cfg}){
   return(
     <div>
       <Card>
-        <STit c="War Map" sub="The campaign map is tracked on an external platform"/>
-        {cfg?.legendkeeperUrl?(
-          <div>
-            <div style={{fontSize:"0.9rem",color:T.mut,marginBottom:"0.75rem"}}>The current campaign map is hosted on Legendkeeper. Click below to view and track army movements.</div>
-            <a href={cfg.legendkeeperUrl} target="_blank" rel="noreferrer"
-              style={{display:"inline-block",padding:"0.6rem 1.2rem",background:T.gold,color:T.bg,fontFamily:"'Cinzel',serif",fontSize:"0.78rem",letterSpacing:"0.1em",textDecoration:"none",fontWeight:700}}>
-              🗺 Open Campaign Map on Legendkeeper
-            </a>
+        <STit c="War Map" sub="The GM can upload a campaign map image or add an external Legendkeeper link."/>
+        {cfg?.mapImage&&(
+          <div style={{marginBottom:"1rem",border:`1px solid ${T.bhi}`,background:T.bg,padding:"0.35rem",overflow:"auto"}}>
+            <img src={cfg.mapImage} style={{width:"100%",maxHeight:"78vh",objectFit:"contain",display:"block"}} alt="Campaign map"/>
           </div>
-        ):(
-          <div style={{color:T.mut,fontStyle:"italic",fontSize:"0.9rem"}}>The Game Master has not yet linked the campaign map.</div>
+        )}
+        {cfg?.legendkeeperUrl&&(
+          <a href={cfg.legendkeeperUrl} target="_blank" rel="noreferrer"
+            style={{display:"inline-block",padding:"0.7rem 1.2rem",background:T.gold,color:T.bg,fontFamily:"'Cinzel',serif",fontSize:"0.9rem",letterSpacing:"0.1em",textDecoration:"none",fontWeight:800,marginBottom:"0.75rem"}}>
+            🗺 Open Campaign Map on Legendkeeper
+          </a>
+        )}
+        {!cfg?.mapImage&&!cfg?.legendkeeperUrl&&(
+          <div style={{color:T.mut,fontStyle:"italic",fontSize:"1rem"}}>The Game Master has not yet uploaded or linked the campaign map.</div>
         )}
       </Card>
     </div>
@@ -718,15 +752,15 @@ function MapPanel({cfg}){
 function PlayerApp({user:initUser,onLogout}){
   const [tab,setTab]=useState("senate");
   const [user,setUser]=useState(initUser);
-  const [D,setD]=useState({players:[],game:DEF_GAME,legions:DEF_LEGIONS,motions:[],orders:[],deadline:null,cfg:{}});
+  const [D,setD]=useState({players:[],game:DEF_GAME,legions:DEF_LEGIONS,motions:[],orders:[],deadline:null,cfg:{},laws:LAWS});
 
   const refresh=useCallback(async()=>{
-    const [players,game,legions,motions,orders,deadline,cfg]=await Promise.all([
+    const [players,game,legions,motions,orders,deadline,cfg,laws]=await Promise.all([
       db.get("spqr_p"),db.get("spqr_g"),db.get("spqr_l"),
-      db.get("spqr_m"),db.get("spqr_o"),db.get("spqr_deadline"),db.get("spqr_cfg")
+      db.get("spqr_m"),db.get("spqr_o"),db.get("spqr_deadline"),db.get("spqr_cfg"),db.get("spqr_laws")
     ]);
     setD({players:players||[],game:game||DEF_GAME,legions:legions||DEF_LEGIONS,
-      motions:motions||[],orders:orders||[],deadline:deadline||null,cfg:cfg||{}});
+      motions:motions||[],orders:orders||[],deadline:deadline||null,cfg:cfg||{},laws:laws||LAWS});
     if(players){const me=players.find(p=>p.id===user.id);if(me)setUser(me);}
   },[user.id]);
 
@@ -749,7 +783,7 @@ function PlayerApp({user:initUser,onLogout}){
   return(
     <div style={{minHeight:"100vh",background:T.bg}}>
       <style>{CSS}</style>
-      <div style={{background:T.surf,borderBottom:`2px solid ${T.border}`,padding:"0.5rem 1rem",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"0.4rem",position:"sticky",top:0,zIndex:100}}>
+      <div className="spqr-topbar" style={{background:T.surf,borderBottom:`2px solid ${T.border}`,padding:"0.5rem 1rem",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"0.4rem",position:"sticky",top:0,zIndex:100}}>
         <div style={{fontFamily:"'Cinzel',serif",color:T.gold,fontSize:"1rem",fontWeight:900,letterSpacing:"0.22em"}}>SPQR</div>
         <div style={{display:"flex",alignItems:"center",gap:"0.6rem",flexWrap:"wrap"}}>
           <span style={{color:T.mut,fontSize:"0.75rem",fontFamily:"'Cinzel',serif"}}>{D.game.year} BC · {D.game.season} S{D.game.sessionInSeason}</span>
@@ -760,20 +794,20 @@ function PlayerApp({user:initUser,onLogout}){
           <Btn v="ghost" sm onClick={onLogout}>Exit</Btn>
         </div>
       </div>
-      <div style={{display:"flex",borderBottom:`1px solid ${T.border}`,background:T.surf,overflowX:"auto",position:"sticky",top:"45px",zIndex:99}}>
+      <div className="spqr-tabs" style={{display:"flex",borderBottom:`1px solid ${T.border}`,background:T.surf,overflowX:"auto",position:"sticky",top:"45px",zIndex:99}}>
         {TABS.map(({k,l})=>(
           <button key={k} onClick={()=>setTab(k)} style={{padding:"0.55rem 0.9rem",background:tab===k?T.card:"transparent",color:tab===k?T.gold:T.mut,border:"none",borderBottom:tab===k?`2px solid ${T.gold}`:"2px solid transparent",fontFamily:"'Cinzel',serif",fontSize:"0.68rem",letterSpacing:"0.1em",whiteSpace:"nowrap",flexShrink:0}}>
             {l}
           </button>
         ))}
       </div>
-      <div style={{maxWidth:1000,margin:"0 auto",padding:"1rem"}}>
+      <div className="spqr-shell" style={{maxWidth:1120,margin:"0 auto",padding:"1rem"}}>
         {tab==="senate"    &&<SenatePanel players={D.players} D={D}/>}
         {tab==="voting"    &&<VotingPanel motions={D.motions} players={D.players} user={user} onRefresh={refresh}/>}
         {tab==="orders"    &&<OrdersPanel orders={D.orders} game={D.game} players={D.players}/>}
         {tab==="office"    &&pos&&<MyOfficePanel user={user} game={D.game} legions={D.legions} players={D.players} orders={D.orders} deadline={D.deadline} onRefresh={refresh}/>}
         {tab==="character" &&<CharacterPanel user={user} onUpdate={setUser}/>}
-        {tab==="laws"      &&<LawsPanel/>}
+        {tab==="laws"      &&<LawsPanel laws={D.laws}/>}
         {tab==="map"       &&<MapPanel cfg={D.cfg}/>}
       </div>
     </div>
@@ -886,41 +920,58 @@ function ASenators({D,onRefresh}){
 function ALegions({D,onRefresh}){
   const [legs,setLegs]=useState(null);
   const [msg,setMsg]=useState("");
-  useEffect(()=>{setLegs((D.legions||DEF_LEGIONS).map(l=>({...l})));},[D.legions]);
+  useEffect(()=>{setLegs((D.legions||DEF_LEGIONS).map(l=>({name:l.name||`Legio ${l.id}`,max:l.max||5000,str:l.str??5000,...l})));},[D.legions]);
   if(!legs)return null;
-  const upd=(i,k,v)=>setLegs(ls=>ls.map((l,j)=>j===i?{...l,[k]:isNaN(Number(v))?v:Number(v)}:l));
+  const upd=(i,k,v)=>setLegs(ls=>ls.map((l,j)=>j===i?{...l,[k]:(k==="str"||k==="max"||k==="prog")?Number(v):v}:l));
   const save=async()=>{await db.set("spqr_l",legs);setMsg("Saved.");onRefresh();setTimeout(()=>setMsg(""),2500);};
-  const raise=async(i)=>{
+  const addLegion=()=>{const n=legs.length+1;setLegs(ls=>[...ls,{id:`${n}`,name:`Legio ${n}`,str:5000,max:5000,status:"active",prog:0,location:"Roma"}]);};
+  const removeLegion=(i)=>{if(confirm("Remove this legion?"))setLegs(ls=>ls.filter((_,j)=>j!==i));};
+  const raiseExisting=async(i)=>{
     const g=await db.get("spqr_g")||DEF_GAME;
     if(g.gold<g.lgold||g.food<g.lfood||g.pop<g.lpop){setMsg("Insufficient resources to raise a legion.");return;}
     await db.set("spqr_g",{...g,gold:g.gold-g.lgold,food:g.food-g.lfood,pop:g.pop-g.lpop});
-    setLegs(ls=>ls.map((l,j)=>j===i?{...l,status:"raising",prog:0,location:"Roma"}:l));
+    setLegs(ls=>ls.map((l,j)=>j===i?{...l,status:"raising",prog:0,str:0,max:l.max||5000,location:l.location||"Roma"}:l));
     setMsg("Raising started.");
+  };
+  const recruitNew=async()=>{
+    const g=await db.get("spqr_g")||DEF_GAME;
+    if(g.gold<g.lgold||g.food<g.lfood||g.pop<g.lpop){setMsg("Insufficient resources to recruit a new legion.");return;}
+    await db.set("spqr_g",{...g,gold:g.gold-g.lgold,food:g.food-g.lfood,pop:g.pop-g.lpop});
+    const n=legs.length+1;
+    setLegs(ls=>[...ls,{id:`${n}`,name:`Legio ${n}`,str:0,max:5000,status:"raising",prog:0,location:"Roma"}]);
+    setMsg("New legion recruitment started. Save to keep it.");
   };
   const sc={active:T.blue,raising:T.gold,destroyed:T.rhi,unraised:T.fnt};
   return(
     <div>
-      {msg&&<div style={{padding:"0.4rem 0.75rem",background:"#0a1a0a",border:`1px solid ${T.gre}`,color:T.gre,marginBottom:"0.6rem",fontSize:"0.85rem"}}>{msg}</div>}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:"0.5rem",marginBottom:"0.75rem"}}>
+      {msg&&<div style={{padding:"0.55rem 0.8rem",background:"#0a1a0a",border:`1px solid ${T.gre}`,color:T.gre,marginBottom:"0.7rem",fontSize:"1rem"}}>{msg}</div>}
+      <Card>
+        <STit c="Legion Recruitment" sub="Legions are 5,000 soldiers by default. There is no hard limit; add or recruit as many as the campaign needs."/>
+        <Row gap="0.5rem" wrap>
+          <Btn v="green" onClick={recruitNew}>＋ Recruit New Legion</Btn>
+          <Btn v="dark" onClick={addLegion}>＋ Add Legion Manually</Btn>
+          <Btn onClick={save}>💾 Save Legion Data</Btn>
+        </Row>
+      </Card>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:"0.6rem",marginBottom:"0.75rem"}}>
         {legs.map((l,i)=>(
-          <div key={l.id} style={{background:T.card,border:`1px solid ${T.border}`,padding:"0.6rem"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.35rem"}}>
-              <span style={{fontFamily:"'Cinzel',serif",color:T.text,fontWeight:600,fontSize:"0.85rem"}}>Legio {l.id}</span>
-              <div style={{display:"flex",gap:"0.3rem",alignItems:"center"}}>
-                <select value={l.status} onChange={e=>upd(i,"status",e.target.value)} style={{background:T.bg,border:`1px solid ${T.border}`,color:sc[l.status]||T.mut,padding:"0.15rem 0.3rem",fontFamily:"'Cinzel',serif",fontSize:"0.62rem"}}>
+          <div key={`${l.id}-${i}`} style={{background:T.card,border:`1px solid ${T.border}`,padding:"0.75rem"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.5rem",gap:"0.5rem",flexWrap:"wrap"}}>
+              <span style={{fontFamily:"'Cinzel',serif",color:T.text,fontWeight:800,fontSize:"1rem"}}>{l.name||`Legio ${l.id}`}</span>
+              <div style={{display:"flex",gap:"0.35rem",alignItems:"center",flexWrap:"wrap"}}>
+                <select value={l.status} onChange={e=>upd(i,"status",e.target.value)} style={{background:T.bg,border:`1px solid ${T.border}`,color:sc[l.status]||T.mut,padding:"0.25rem 0.4rem",fontFamily:"'Cinzel',serif",fontSize:"0.78rem"}}>
                   <option value="active">Active</option><option value="raising">Raising</option><option value="destroyed">Destroyed</option><option value="unraised">Unraised</option>
                 </select>
-                {(l.status==="destroyed"||l.status==="unraised")&&<Btn v="green" sm onClick={()=>raise(i)}>Raise</Btn>}
+                {(l.status==="destroyed"||l.status==="unraised")&&<Btn v="green" sm onClick={()=>raiseExisting(i)}>Raise</Btn>}
+                <Btn v="red" sm onClick={()=>removeLegion(i)}>Remove</Btn>
               </div>
             </div>
-            {(l.status==="active"||l.status==="raising")&&(
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.3rem"}}>
-                {[["Strength","str"],["Location","location"]].map(([lb,k])=>(
-                  <div key={k}><Lbl c={lb}/><input type={k==="str"?"number":"text"} value={l[k]} onChange={e=>upd(i,k,e.target.value)} style={{width:"100%",background:T.surf,border:`1px solid ${T.border}`,color:T.text,padding:"0.22rem 0.4rem",fontSize:"0.82rem"}}/></div>
-                ))}
-              </div>
-            )}
-            {l.status==="raising"&&<div style={{marginTop:"0.3rem",fontSize:"0.75rem",color:T.gold}}>Progress: {l.prog}/{D.game?.lturns||3} turns</div>}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0.4rem"}}>
+              {[ ["Legion ID","id","text"],["Legion Name","name","text"],["Strength","str","number"],["Max Soldiers","max","number"],["Location","location","text"],["Progress","prog","number"] ].map(([lb,k,type])=>(
+                <div key={k}><Lbl c={lb}/><input type={type} value={l[k]??""} onChange={e=>upd(i,k,e.target.value)} style={{width:"100%",background:T.surf,border:`1px solid ${T.border}`,color:T.text,padding:"0.35rem 0.5rem",fontSize:"0.95rem"}}/></div>
+              ))}
+            </div>
+            {l.status==="raising"&&<div style={{marginTop:"0.45rem",fontSize:"0.9rem",color:T.gold}}>Progress: {l.prog||0}/{D.game?.lturns||3} turns. When finished, it becomes active at 5,000 soldiers.</div>}
           </div>
         ))}
       </div>
@@ -965,7 +1016,7 @@ function AResources({D,onRefresh}){
     const nl=legs.map(l=>{
       if(l.status==="raising"){
         const np=l.prog+1;
-        if(np>=lturns)return{...l,status:"active",str:Math.floor(l.max*0.4),prog:0};
+        if(np>=lturns)return{...l,status:"active",str:l.max||5000,max:l.max||5000,prog:0};
         return{...l,prog:np};
       }
       return l;
@@ -979,18 +1030,46 @@ function AResources({D,onRefresh}){
     onRefresh();setTimeout(()=>setMsg(""),3000);
   };
 
+
+  const goBack=async()=>{
+    if(!confirm("Go back one session? This changes only the calendar/session counter, not resources or orders."))return;
+    let ng={...g};
+    ng.session=Math.max(1,(ng.session||1)-1);
+    if((ng.sessionInSeason||1)>1){ng.sessionInSeason=1;}
+    else{
+      const idx=SEASONS.indexOf(ng.season);
+      const prev=(idx-1+SEASONS.length)%SEASONS.length;
+      ng.season=SEASONS[prev];
+      ng.sessionInSeason=2;
+      if(ng.season==="Winter")ng.year=(ng.year||218)+1;
+    }
+    await db.set("spqr_g",ng);
+    await db.set("spqr_deadline",null);
+    setG(ng);setMsg("Went back one session.");onRefresh();setTimeout(()=>setMsg(""),3000);
+  };
+  const restartGame=async()=>{
+    if(!confirm("Restart the campaign? This will reset resources, legions, regions, motions, orders, deadlines and notifications. Senators and setup images/links are kept."))return;
+    await db.set("spqr_g",DEF_GAME);
+    await db.set("spqr_l",DEF_LEGIONS);
+    await db.set("spqr_r",DEF_REGIONS);
+    await db.set("spqr_m",[]);
+    await db.set("spqr_o",[]);
+    await db.set("spqr_deadline",null);
+    await db.set("spqr_n",[]);
+    setG(DEF_GAME);setMsg("Game restarted.");onRefresh();setTimeout(()=>setMsg(""),3000);
+  };
   return(
     <div>
       {msg&&<div style={{padding:"0.4rem 0.75rem",background:"#0a1a0a",border:`1px solid ${T.gre}`,color:T.gre,marginBottom:"0.6rem",fontSize:"0.85rem"}}>{msg}</div>}
       <Card>
         <STit c="Current Session"/>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"0.4rem",marginBottom:"0.75rem"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:"0.4rem",marginBottom:"0.75rem"}}>
           <Stat label="Session" value={g.session}/>
           <Stat label="Season" value={`${g.season} S${g.sessionInSeason}`}/>
           <Stat label="Year" value={`${g.year} BC`}/>
           <Stat label="Net Gold/Sess" value={`${inc.gold-upkeepG>=0?"+":""}${inc.gold-upkeepG}`} color={inc.gold-upkeepG>=0?T.gre:T.rhi}/>
         </div>
-        <Btn v="dark" onClick={()=>setConfirmAdv(true)}>▶ Advance Session</Btn>
+        <Row gap="0.5rem" wrap><Btn v="dark" onClick={()=>setConfirmAdv(true)}>▶ Advance Session</Btn><Btn v="ghost" onClick={goBack}>↩ Back One Turn</Btn><Btn v="red" onClick={restartGame}>⟲ Restart Game</Btn></Row>
       </Card>
       {confirmAdv&&(
         <Modal title="ADVANCE SESSION — CONFIRM" onClose={()=>setConfirmAdv(false)}>
@@ -1016,13 +1095,13 @@ function AResources({D,onRefresh}){
       )}
       <Card>
         <STit c="Resources"/>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"0.4rem",marginBottom:"0.75rem"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:"0.4rem",marginBottom:"0.75rem"}}>
           {[["gold","Gold (Talents)","number"],["food","Food (Modii)","number"],["pop","Population","number"]].map(([k,l,t])=>(
             <div key={k}><Lbl c={l}/><input type={t} value={g[k]} onChange={e=>setG(x=>({...x,[k]:Number(e.target.value)}))} style={{width:"100%",background:T.bg,border:`1px solid ${T.border}`,color:T.text,padding:"0.3rem 0.5rem",fontFamily:"'Cinzel',serif",fontSize:"0.85rem"}}/></div>
           ))}
         </div>
         <STit c="Cost to Raise a Legion"/>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"0.4rem",marginBottom:"0.75rem"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:"0.4rem",marginBottom:"0.75rem"}}>
           {[["lgold","Gold"],["lfood","Food"],["lpop","Population"],["lturns","Turns"]].map(([k,l])=>(
             <div key={k}><Lbl c={l}/><input type="number" value={g[k]} onChange={e=>setG(x=>({...x,[k]:Number(e.target.value)}))} style={{width:"100%",background:T.bg,border:`1px solid ${T.border}`,color:T.text,padding:"0.3rem 0.5rem",fontSize:"0.82rem"}}/></div>
           ))}
@@ -1242,22 +1321,61 @@ function AOrders({D,onRefresh}){
   );
 }
 
+function ALaws({D,onRefresh}){
+  const [laws,setLaws]=useState((D.laws&&D.laws.length?D.laws:LAWS).map(x=>({...x})));
+  const [msg,setMsg]=useState("");
+  useEffect(()=>{setLaws((D.laws&&D.laws.length?D.laws:LAWS).map(x=>({...x})));},[D.laws]);
+  const upd=(i,k,v)=>setLaws(ls=>ls.map((l,j)=>j===i?{...l,[k]:v}:l));
+  const add=()=>setLaws(ls=>[...ls,{t:"New Roman Law",b:"Write the text of the law here."}]);
+  const del=i=>{if(confirm("Delete this law?"))setLaws(ls=>ls.filter((_,j)=>j!==i));};
+  const save=async()=>{await db.set("spqr_laws",laws);setMsg("Laws saved.");onRefresh();setTimeout(()=>setMsg(""),2500);};
+  const reset=async()=>{if(!confirm("Reset laws to the default Roman laws?"))return;await db.set("spqr_laws",LAWS);setLaws(LAWS.map(x=>({...x})));setMsg("Laws reset.");onRefresh();};
+  return(
+    <div>
+      {msg&&<div style={{padding:"0.55rem 0.8rem",background:"#0a1a0a",border:`1px solid ${T.gre}`,color:T.gre,marginBottom:"0.7rem",fontSize:"1rem"}}>{msg}</div>}
+      <Card>
+        <STit c="Laws Editor" sub="These laws appear in the player Laws tab."/>
+        <Row gap="0.5rem" wrap><Btn v="green" onClick={add}>＋ Add New Law</Btn><Btn onClick={save}>💾 Save Laws</Btn><Btn v="ghost" onClick={reset}>Reset Defaults</Btn></Row>
+      </Card>
+      {laws.map((l,i)=>(
+        <Card key={i}>
+          <Inp label={`Law ${i+1} Title`} value={l.t} onChange={v=>upd(i,"t",v)}/>
+          <Inp label="Law Text" value={l.b} onChange={v=>upd(i,"b",v)} rows={4}/>
+          <Btn v="red" sm onClick={()=>del(i)}>Delete Law</Btn>
+        </Card>
+      ))}
+      <Btn onClick={save}>💾 Save Laws</Btn>
+    </div>
+  );
+}
+
 function ASetup({D,onRefresh}){
   const [cfg,setCfg]=useState({...(D.cfg||{})});
   const [msg,setMsg]=useState("");
+  const mapRef=useRef();
+  useEffect(()=>{setCfg({...(D.cfg||{})});},[D.cfg]);
   const save=async()=>{await db.set("spqr_cfg",cfg);setMsg("Settings saved.");onRefresh();setTimeout(()=>setMsg(""),2500);};
+  const handleMap=async(e)=>{
+    const f=e.target.files?.[0];if(!f)return;
+    const b64=await compress(f,1800);
+    setCfg(c=>({...c,mapImage:b64}));
+    setMsg("Map uploaded. Click Save Settings to publish it.");
+  };
   return(
     <div>
-      {msg&&<div style={{padding:"0.4rem 0.75rem",background:"#0a1a0a",border:`1px solid ${T.gre}`,color:T.gre,marginBottom:"0.6rem",fontSize:"0.85rem"}}>{msg}</div>}
+      {msg&&<div style={{padding:"0.5rem 0.8rem",background:"#0a1a0a",border:`1px solid ${T.gre}`,color:T.gre,marginBottom:"0.7rem",fontSize:"1rem"}}>{msg}</div>}
       <Card>
         <STit c="Senate Tab — Header Image"/>
-        <div style={{fontSize:"0.85rem",color:T.mut,marginBottom:"0.75rem"}}>Paste a public image URL. Players will see this image at the top of the Senate tab.</div>
+        <div style={{fontSize:"1rem",color:T.mut,marginBottom:"0.75rem"}}>Paste a public image URL. Players will see this image at the top of the Senate tab.</div>
         <Inp label="Senate Image URL" value={cfg.senateImage||""} onChange={v=>setCfg(c=>({...c,senateImage:v}))} placeholder="https://… (a painting of the Roman Senate)"/>
-        {cfg.senateImage&&<div style={{marginBottom:"0.75rem",border:`1px solid ${T.bhi}`,overflow:"hidden",maxHeight:200}}><img src={cfg.senateImage} style={{width:"100%",objectFit:"cover"}} alt="Preview" onError={()=>{}}/></div>}
+        {cfg.senateImage&&<div style={{marginBottom:"0.75rem",border:`1px solid ${T.bhi}`,overflow:"hidden",maxHeight:240}}><img src={cfg.senateImage} style={{width:"100%",objectFit:"cover"}} alt="Preview" onError={()=>{}}/></div>}
       </Card>
       <Card>
-        <STit c="Campaign Map — Legendkeeper Link"/>
-        <Inp label="Legendkeeper URL" value={cfg.legendkeeperUrl||""} onChange={v=>setCfg(c=>({...c,legendkeeperUrl:v}))} placeholder="https://app.legendkeeper.com/…"/>
+        <STit c="Campaign Map" sub="Upload an actual map image for the Map tab. You can also keep a Legendkeeper link."/>
+        <input type="file" ref={mapRef} onChange={handleMap} accept="image/*" style={{display:"none"}}/>
+        <Row gap="0.5rem" wrap><Btn v="dark" onClick={()=>mapRef.current.click()}>⬆ Upload Map Image</Btn>{cfg.mapImage&&<Btn v="red" onClick={()=>setCfg(c=>({...c,mapImage:null}))}>Remove Uploaded Map</Btn>}</Row>
+        {cfg.mapImage&&<div style={{marginTop:"0.75rem",border:`1px solid ${T.bhi}`,background:T.bg,padding:"0.35rem",maxHeight:380,overflow:"auto"}}><img src={cfg.mapImage} style={{width:"100%",objectFit:"contain"}} alt="Map preview"/></div>}
+        <div style={{marginTop:"0.75rem"}}><Inp label="Legendkeeper URL" value={cfg.legendkeeperUrl||""} onChange={v=>setCfg(c=>({...c,legendkeeperUrl:v}))} placeholder="https://app.legendkeeper.com/…"/></div>
       </Card>
       <Btn onClick={save}>💾 Save Settings</Btn>
     </div>
@@ -1267,15 +1385,15 @@ function ASetup({D,onRefresh}){
 /* ══ ADMIN APP ════════════════════════════════════════════════════════════ */
 function AdminApp({onLogout}){
   const [tab,setTab]=useState("overview");
-  const [D,setD]=useState({players:[],game:DEF_GAME,legions:DEF_LEGIONS,regions:DEF_REGIONS,motions:[],orders:[],deadline:null,cfg:{}});
+  const [D,setD]=useState({players:[],game:DEF_GAME,legions:DEF_LEGIONS,regions:DEF_REGIONS,motions:[],orders:[],deadline:null,cfg:{},laws:LAWS});
 
   const refresh=useCallback(async()=>{
-    const [players,game,legions,regions,motions,orders,deadline,cfg]=await Promise.all([
+    const [players,game,legions,regions,motions,orders,deadline,cfg,laws]=await Promise.all([
       db.get("spqr_p"),db.get("spqr_g"),db.get("spqr_l"),db.get("spqr_r"),
-      db.get("spqr_m"),db.get("spqr_o"),db.get("spqr_deadline"),db.get("spqr_cfg")
+      db.get("spqr_m"),db.get("spqr_o"),db.get("spqr_deadline"),db.get("spqr_cfg"),db.get("spqr_laws")
     ]);
     setD({players:players||[],game:game||DEF_GAME,legions:legions||DEF_LEGIONS,
-      regions:regions||DEF_REGIONS,motions:motions||[],orders:orders||[],deadline:deadline||null,cfg:cfg||{}});
+      regions:regions||DEF_REGIONS,motions:motions||[],orders:orders||[],deadline:deadline||null,cfg:cfg||{},laws:laws||LAWS});
   },[]);
 
   useEffect(()=>{refresh();const t=setInterval(refresh,20000);return()=>clearInterval(t);},[refresh]);
@@ -1291,13 +1409,14 @@ function AdminApp({onLogout}){
     {k:"regions",l:"Regions"},
     {k:"motions",l:`Motions${pendM?` (${pendM})`:""}`},
     {k:"orders",l:`Orders${newO?` (${newO})`:""}`},
+    {k:"laws",l:"Laws"},
     {k:"setup",l:"Setup"},
   ];
 
   return(
     <div style={{minHeight:"100vh",background:T.bg}}>
       <style>{CSS}</style>
-      <div style={{background:"#0A0600",borderBottom:`2px solid ${T.red}`,padding:"0.5rem 1rem",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"0.4rem",position:"sticky",top:0,zIndex:100}}>
+      <div className="spqr-topbar" style={{background:"#0A0600",borderBottom:`2px solid ${T.red}`,padding:"0.5rem 1rem",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"0.4rem",position:"sticky",top:0,zIndex:100}}>
         <Row gap="0.6rem"><div style={{fontFamily:"'Cinzel',serif",color:T.gold,fontSize:"1rem",fontWeight:900,letterSpacing:"0.22em"}}>SPQR</div><Badge c="GM PANEL" color={T.rhi}/></Row>
         <Row gap="0.5rem">
           <span style={{color:T.mut,fontSize:"0.75rem",fontFamily:"'Cinzel',serif"}}>{D.game.year} BC · {D.game.season} S{D.game.sessionInSeason}</span>
@@ -1306,14 +1425,14 @@ function AdminApp({onLogout}){
           <Btn v="ghost" sm onClick={onLogout}>Exit Panel</Btn>
         </Row>
       </div>
-      <div style={{display:"flex",borderBottom:`1px solid ${T.border}`,background:T.surf,overflowX:"auto",position:"sticky",top:"45px",zIndex:99}}>
+      <div className="spqr-tabs" style={{display:"flex",borderBottom:`1px solid ${T.border}`,background:T.surf,overflowX:"auto",position:"sticky",top:"45px",zIndex:99}}>
         {TABS.map(({k,l})=>(
           <button key={k} onClick={()=>setTab(k)} style={{padding:"0.55rem 0.9rem",background:tab===k?T.card:"transparent",color:tab===k?T.gold:T.mut,border:"none",borderBottom:tab===k?`2px solid ${T.gold}`:"2px solid transparent",fontFamily:"'Cinzel',serif",fontSize:"0.68rem",letterSpacing:"0.1em",whiteSpace:"nowrap",flexShrink:0}}>
             {l}
           </button>
         ))}
       </div>
-      <div style={{maxWidth:1100,margin:"0 auto",padding:"1rem"}}>
+      <div className="spqr-shell" style={{maxWidth:1180,margin:"0 auto",padding:"1rem"}}>
         {tab==="overview"  &&<AOverview D={D}/>}
         {tab==="senators"  &&<ASenators D={D} onRefresh={refresh}/>}
         {tab==="legions"   &&<ALegions D={D} onRefresh={refresh}/>}
@@ -1321,6 +1440,7 @@ function AdminApp({onLogout}){
         {tab==="regions"   &&<ARegions D={D} onRefresh={refresh}/>}
         {tab==="motions"   &&<AMotions D={D} onRefresh={refresh}/>}
         {tab==="orders"    &&<AOrders D={D} onRefresh={refresh}/>}
+        {tab==="laws"      &&<ALaws D={D} onRefresh={refresh}/>}
         {tab==="setup"     &&<ASetup D={D} onRefresh={refresh}/>}
       </div>
     </div>
